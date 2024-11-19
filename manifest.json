@@ -1,0 +1,11 @@
+{
+        "manifest_version": 3,
+        "name": "Web Accessability Extention",
+        "description": "Dynamically improves the acccessabilty of websites to the WCAG 2.0 guidelines",
+        "version": "0.1",
+        "content_scripts": [{"matches":["https://*/*"],"js": ["scripts/content.js","scripts/colorContrastChecker.js"]}],
+        "action": {
+          "default_popup": "popup/popup.html",
+          "default_icon": "icon2.png"
+        }
+}
