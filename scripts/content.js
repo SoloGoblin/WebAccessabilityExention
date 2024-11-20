@@ -2,21 +2,36 @@
 
 let countNonValid = 0;
 let countTotal = 0;
+let toggle = false;
+const originalBody = document.getElementsByTagName("body")[0];
 
 async function analyzeAccessibility() {
+
     const body = document.getElementsByTagName("body")[0];
-    let parentBackgroundColor = getComputedStyle(body).backgroundColor; 
-    await scrapeForColors(body, parentBackgroundColor);
-    console.log(countNonValid);
-    console.log(countTotal);
-    console.log(countNonValid/countTotal);
-    countNonValid=0;
-    countTotal=0;
-    parentBackgroundColor = getComputedStyle(body).backgroundColor; 
-    await scrapeForColors(body, parentBackgroundColor);
-    console.log(countNonValid);
-    console.log(countTotal);
-    console.log(countNonValid/countTotal);
+
+    if(toggle) {
+        let parentBackgroundColor = getComputedStyle(originalBody).backgroundColor; 
+        await scrapeForColors(originalBody, parentBackgroundColor);
+    } else {
+        let parentBackgroundColor = getComputedStyle(body).backgroundColor; 
+        await scrapeForColors(body, parentBackgroundColor);
+    }
+
+    // countNonValid=0;
+    // countTotal=0;
+
+    // parentBackgroundColor = getComputedStyle(body).backgroundColor; 
+    // await scrapeForColors(body, parentBackgroundColor);
+
+    if(toggle) {
+        toggle=false;
+    } else {
+        toggle=true;
+    }
+    // console.log(countNonValid);
+    // console.log(countTotal);
+    // console.log(countNonValid/countTotal);
+    
 }
 
 function contrastChecker({backgroundColor,fontColor,fontSize}) {
@@ -84,12 +99,19 @@ async function scrapeForColors(element,parentBackgroundColor) {
 
         var valid = await sendColors(backgroundColor, elementColor, fontSize);
 
-        if(!valid.worked) {
-            countNonValid++;
-            element.children[i].style.backgroundColor="white";
+        if(!toggle) {
+            if(!valid.worked) {
+                countNonValid++;
+                element.children[i].style.backgroundColor="white";
+                element.children[i].style.color="black";
+                element.children[i].style.fontSize="14px";
+            }
+        } else {
+            element.children[i].style.backgroundColor=originalBody.backgroundColor;
             element.children[i].style.color="black";
             element.children[i].style.fontSize="14px";
         }
+        
 
         console.log(valid);
 
