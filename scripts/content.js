@@ -1,10 +1,9 @@
 // const ColorContrastChecker = requires("./colorContrastChecker")
-
 let countNonValid = 0;
 let countTotal = 0;
 let toggle = false;
-let body = document.getElementsByTagName("body")[0];
-let originalBody = body.cloneNode(true);
+// let body = document.getElementsByTagName("body")[0];
+const originalBody = document.body.cloneNode(true);
 
 // console.log(originalBody);
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -17,17 +16,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   });
 
 async function analyzeAccessibility() {
+
     countNonValid = 0;
     countTotal = 0;
 
-    const body = document.getElementsByTagName("body")[0];
-
     if(toggle) {
-        let parentBackgroundColor = getComputedStyle(originalBody).backgroundColor; 
-        await scrapeForColors(body, originalBody, parentBackgroundColor);
+        document.body=originalBody;
+        console.log(document.body);
+        console.log(originalBody);
     } else {
+        const body = document.body;
         let parentBackgroundColor = getComputedStyle(body).backgroundColor; 
         await scrapeForColors(body, originalBody, parentBackgroundColor);
+        console.log(document.body);
+        console.log(originalBody);
     }
 
     // countNonValid=0;
@@ -44,9 +46,9 @@ async function analyzeAccessibility() {
         toggle=true;
     }
 
-    console.log(countNonValid);
-    console.log(countTotal);
-    console.log(countNonValid/countTotal);
+    // console.log(countNonValid);
+    // console.log(countTotal);
+    // console.log(countNonValid/countTotal);
     
 }
 
@@ -71,7 +73,7 @@ function rgbToHex(input) {
         return (x.length == 1) ? "0" + x : x; //Add zero if we get only one character
     })
     var color = "#" + b.join("");
-    return color;
+    return color.substring(0,7);
 }
 
 async function sendColors(backgroundColor, elementColor, fontSize) {
@@ -95,30 +97,30 @@ function getChildText(element) {
 
 async function scrapeForColors(element, ogElement, parentBackgroundColor) {
     for(let i=0; i<element.children.length; i++) {
-        console.log(getChildText(element.children[i]));
+        // console.log(getChildText(element.children[i]));
         // console.log(element);
         // console.log(element.children[i]);
         // console.log(element.children[i].tagName);
         // console.log(element.children[i]);
         // console.log(element.children[i].children);
-        console.log(element.children[i]);
-        console.log(ogElement.children[i]);
-        if(element.children[i].tagName=="script"||ogElement.children[i].tagName=="script") {
-            break;
-        }
+        // console.log(element.children[i]);
+        // console.log(ogElement.children[i]);
+        // if(element.children[i].tagName=="script"||ogElement.children[i].tagName=="script") {
+        //     break;
+        // }
         // if(!(getChildText(element.children[i])=="")) {
             var rgbBackgroundColor = getComputedStyle(element.children[i]).backgroundColor;
             if (rgbBackgroundColor == "rgba(0, 0, 0, 0)") {
                 rgbBackgroundColor = parentBackgroundColor;
             }
         
-            var backgroundColor = rgbToHex(rgbBackgroundColor).substring(0,7);
+            var backgroundColor = rgbToHex(rgbBackgroundColor);
     
             const rgbElementColor = getComputedStyle(element.children[i]).color;
     
             const fontSizeBefore = getComputedStyle(element.children[i]).fontSize;
     
-            console.log(rgbElementColor);
+            // console.log(rgbElementColor);
             const fontSize = fontSizeBefore.split('p')[0];
     
             // console.log(fontSize);
@@ -144,9 +146,9 @@ async function scrapeForColors(element, ogElement, parentBackgroundColor) {
 
         countTotal++;
 
-        if(element.children[i].children.length!=0) { 
-            await scrapeForColors(element.children[i],ogElement.children[i],rgbBackgroundColor);
-        }
+        // if((element?.children[i].children.length!=0)&&(ogElement?.children[i].children.length!=0)) { 
+            await scrapeForColors(element?.children[i],ogElement?.children[i],rgbBackgroundColor);
+        // }
     }
 }
 
@@ -373,10 +375,6 @@ ColorContrastChecker.prototype = {
     }
 
 };
-/*
-(async ()=>{
-
-    analyzeAccessibility();
-
-})()
-*/
+// (async ()=>{
+  
+// })()
