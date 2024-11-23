@@ -5,6 +5,13 @@ let toggle = false;
 // let body = document.getElementsByTagName("body")[0];
 const originalBody = document.body.cloneNode(true);
 
+var xml = new XMLSerializer().serializeToString(originalBody);
+
+
+chrome.storage.local.set({originalBody: xml }).then(() => {
+  });
+  
+
 // console.log(originalBody);
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // console.log('content listener')
@@ -21,7 +28,22 @@ async function analyzeAccessibility() {
     countTotal = 0;
 
     if(toggle) {
-        document.body=originalBody;
+        
+        chrome.storage.local.get(["originalBody"]).then((result) => {
+            var restoredDoc = new DOMParser().parseFromString(result.originalBody, "text/xml");
+
+
+            // console.log(result.originalBody);
+            // console.log(result + "result");
+            // console.log(JSON.stringify(result) + "result stringify");
+            console.log(restoredDoc + "restored doc");
+            // console.log(restoredDoc.toString() +"to string");
+
+            document=restoredDoc;
+          });
+
+        
+
         console.log(document.body);
         console.log(originalBody);
     } else {
