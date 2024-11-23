@@ -3,18 +3,31 @@
 let countNonValid = 0;
 let countTotal = 0;
 let toggle = false;
-const originalBody = document.getElementsByTagName("body")[0];
+let body = document.getElementsByTagName("body")[0];
+let originalBody = body.cloneNode(true);
+
+// console.log(originalBody);
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // console.log('content listener')
+    if (message.action === "accessabilityToggle") {
+    //   document.body.style.backgroundColor = message.color;
+    analyzeAccessibility()
+      sendResponse({ status: "Color changed to " + message.color });
+    }
+  });
 
 async function analyzeAccessibility() {
+    countNonValid = 0;
+    countTotal = 0;
 
     const body = document.getElementsByTagName("body")[0];
 
     if(toggle) {
         let parentBackgroundColor = getComputedStyle(originalBody).backgroundColor; 
-        await scrapeForColors(originalBody, parentBackgroundColor);
+        await scrapeForColors(body, originalBody, parentBackgroundColor);
     } else {
         let parentBackgroundColor = getComputedStyle(body).backgroundColor; 
-        await scrapeForColors(body, parentBackgroundColor);
+        await scrapeForColors(body, originalBody, parentBackgroundColor);
     }
 
     // countNonValid=0;
@@ -24,13 +37,16 @@ async function analyzeAccessibility() {
     // await scrapeForColors(body, parentBackgroundColor);
 
     if(toggle) {
+        alert((countNonValid/countTotal)*100+"% of the elements on this webpage are not valid by the WCAG standards. After clicking 'ok', the page will reset to its initial state.");
         toggle=false;
     } else {
+        alert("Initially "+(countNonValid/countTotal)*100+"% of the elements on this webpage were not valid by the WCAG standards. After clicking 'ok', all of the elements on the page will meet the WCAG criteria.");
         toggle=true;
     }
-    // console.log(countNonValid);
-    // console.log(countTotal);
-    // console.log(countNonValid/countTotal);
+
+    console.log(countNonValid);
+    console.log(countTotal);
+    console.log(countNonValid/countTotal);
     
 }
 
@@ -39,9 +55,9 @@ function contrastChecker({backgroundColor,fontColor,fontSize}) {
 
     let worked = true;
     if (ccc.isLevelAA(backgroundColor, fontColor, parseInt(fontSize))&&(fontSize>=10)) {
-        console.log("The color contrast is valid for Level AA");
+        // console.log("The color contrast is valid for Level AA");
     } else {
-        console.log("The color contrast is INVALID");
+        // console.log("The color contrast is INVALID");
         worked = false;
     }
     return worked;
@@ -67,58 +83,69 @@ async function sendColors(backgroundColor, elementColor, fontSize) {
     return validContrast;
 };
 
-async function scrapeForColors(element,parentBackgroundColor) {
+function getChildText(element) {
+    let text = '';
+    for (let child of element.childNodes) {
+        if(child.nodeType === Node.TEXT_NODE) {
+          text += child.textContent.trim(); // Get only text nodes and trim whitespace
+        }
+    }
+    return text;
+}
+
+async function scrapeForColors(element, ogElement, parentBackgroundColor) {
     for(let i=0; i<element.children.length; i++) {
+        console.log(getChildText(element.children[i]));
         // console.log(element);
         // console.log(element.children[i]);
         // console.log(element.children[i].tagName);
         // console.log(element.children[i]);
         // console.log(element.children[i].children);
-        
-        if(element.children[i].tagName=="script") {
+        console.log(element.children[i]);
+        console.log(ogElement.children[i]);
+        if(element.children[i].tagName=="script"||ogElement.children[i].tagName=="script") {
             break;
         }
-
-        var rgbBackgroundColor = getComputedStyle(element.children[i]).backgroundColor;
-        if (rgbBackgroundColor == "rgba(0, 0, 0, 0)") {
-            rgbBackgroundColor = parentBackgroundColor;
-        }
-    
-        var backgroundColor = rgbToHex(rgbBackgroundColor).substring(0,7);
-
-        const rgbElementColor = getComputedStyle(element.children[i]).color;
-
-        const fontSizeBefore = getComputedStyle(element.children[i]).fontSize;
-
-
-        const fontSize = fontSizeBefore.split('p')[0];
-
-        console.log(fontSize);
-
-        var elementColor = rgbToHex(rgbElementColor);
-
-        var valid = await sendColors(backgroundColor, elementColor, fontSize);
-
-        if(!toggle) {
-            if(!valid.worked) {
-                countNonValid++;
-                element.children[i].style.backgroundColor="white";
-                element.children[i].style.color="black";
-                element.children[i].style.fontSize="14px";
+        // if(!(getChildText(element.children[i])=="")) {
+            var rgbBackgroundColor = getComputedStyle(element.children[i]).backgroundColor;
+            if (rgbBackgroundColor == "rgba(0, 0, 0, 0)") {
+                rgbBackgroundColor = parentBackgroundColor;
             }
-        } else {
-            element.children[i].style.backgroundColor=originalBody.backgroundColor;
-            element.children[i].style.color="black";
-            element.children[i].style.fontSize="14px";
-        }
         
-
-        console.log(valid);
+            var backgroundColor = rgbToHex(rgbBackgroundColor).substring(0,7);
+    
+            const rgbElementColor = getComputedStyle(element.children[i]).color;
+    
+            const fontSizeBefore = getComputedStyle(element.children[i]).fontSize;
+    
+            console.log(rgbElementColor);
+            const fontSize = fontSizeBefore.split('p')[0];
+    
+            // console.log(fontSize);
+    
+            var elementColor = rgbToHex(rgbElementColor);
+    
+            var valid = await sendColors(backgroundColor, elementColor, fontSize);
+    
+            if(!toggle) {
+                if(!valid.worked) {
+                    countNonValid++;
+                    element.children[i].style.backgroundColor="white";
+                    element.children[i].style.color="black";
+                    element.children[i].style.fontSize="18px";
+                }
+            } else {
+                element.children[i].style.backgroundColor=ogElement.children[i].style.backgroundColor;
+                element.children[i].style.color=ogElement.children[i].style.color;
+                element.children[i].style.fontSize=ogElement.children[i].style.fontSize;
+            }
+        // }
+        // console.log(valid);
 
         countTotal++;
 
         if(element.children[i].children.length!=0) { 
-            await scrapeForColors(element.children[i],rgbBackgroundColor);
+            await scrapeForColors(element.children[i],ogElement.children[i],rgbBackgroundColor);
         }
     }
 }
@@ -346,9 +373,10 @@ ColorContrastChecker.prototype = {
     }
 
 };
-
+/*
 (async ()=>{
 
     analyzeAccessibility();
 
 })()
+*/
