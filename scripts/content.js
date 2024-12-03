@@ -6,13 +6,12 @@ let toggle = false;
 const originalBody = document.body.cloneNode(true);
 
 var xml = new XMLSerializer().serializeToString(originalBody);
-
+// console.log(originalBody);
 
 chrome.storage.local.set({originalBody: xml }).then(() => {
   });
   
 
-// console.log(originalBody);
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // console.log('content listener')
     if (message.action === "accessabilityToggle") {
@@ -22,6 +21,13 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
   });
 
+// chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+//     if (message.action === "accessibilityToggle") {
+//       analyzeAccessibility();
+//       sendResponse({ status: "Accessibility analysis complete." });
+//     }
+//   });
+
 async function analyzeAccessibility() {
 
     countNonValid = 0;
@@ -29,29 +35,33 @@ async function analyzeAccessibility() {
 
     if(toggle) {
         
-        chrome.storage.local.get(["originalBody"]).then((result) => {
-            var restoredDoc = new DOMParser().parseFromString(result.originalBody, "text/xml");
+        // chrome.storage.local.get(["originalBody"]).then((result) => {
+        //     var restoredDoc = new DOMParser().parseFromString(result.originalBody, "text/xml");
 
 
-            // console.log(result.originalBody);
-            // console.log(result + "result");
-            // console.log(JSON.stringify(result) + "result stringify");
-            console.log(restoredDoc + "restored doc");
-            // console.log(restoredDoc.toString() +"to string");
+        //     // console.log(result.originalBody);
+        //     // console.log(result + "result");
+        //     // console.log(JSON.stringify(result) + "result stringify");
+        //     console.log(restoredDoc + "restored doc");
+        //     // console.log(restoredDoc.toString() +"to string");
+        //     document=restoredDoc;
+        //   });
 
-            document=restoredDoc;
+          chrome.storage.local.get(["originalBody"]).then((result) => {
+            if (result.originalBody) {
+              const restoredDoc = new DOMParser().parseFromString(result.originalBody, "text/html");
+              document.body.innerHTML = restoredDoc.body.innerHTML; // Restore original body HTML
+            }
           });
 
-        
-
-        console.log(document.body);
-        console.log(originalBody);
+        // console.log(document.body);
+        // console.log(originalBody);
     } else {
         const body = document.body;
         let parentBackgroundColor = getComputedStyle(body).backgroundColor; 
         await scrapeForColors(body, originalBody, parentBackgroundColor);
-        console.log(document.body);
-        console.log(originalBody);
+        // console.log(document.body);
+        // console.log(originalBody);
     }
 
     // countNonValid=0;
@@ -61,7 +71,7 @@ async function analyzeAccessibility() {
     // await scrapeForColors(body, parentBackgroundColor);
 
     if(toggle) {
-        alert((countNonValid/countTotal)*100+"% of the elements on this webpage are not valid by the WCAG standards. After clicking 'ok', the page will reset to its initial state.");
+        alert("0% of the elements on this webpage are not valid by the WCAG standards. After clicking 'ok', the page will reset to its initial state.");
         toggle=false;
     } else {
         alert("Initially "+(countNonValid/countTotal)*100+"% of the elements on this webpage were not valid by the WCAG standards. After clicking 'ok', all of the elements on the page will meet the WCAG criteria.");
@@ -152,7 +162,7 @@ async function scrapeForColors(element, ogElement, parentBackgroundColor) {
             var valid = await sendColors(backgroundColor, elementColor, fontSize);
     
             if(!toggle) {
-                if(!valid.worked) {
+                if(!valid) {
                     countNonValid++;
                     element.children[i].style.backgroundColor="white";
                     element.children[i].style.color="black";
@@ -164,10 +174,13 @@ async function scrapeForColors(element, ogElement, parentBackgroundColor) {
                 element.children[i].style.fontSize=ogElement.children[i].style.fontSize;
             }
         // }
-        // console.log(valid);
 
         countTotal++;
-
+        // console.log("valid"+valid);
+        // console.log("Validworked"+ valid.worked);
+        // console.log("COUNT" + countTotal);
+        // console.log("COUNT NOT VALID"+ countNonValid);
+        
         // if((element?.children[i].children.length!=0)&&(ogElement?.children[i].children.length!=0)) { 
             await scrapeForColors(element?.children[i],ogElement?.children[i],rgbBackgroundColor);
         // }
