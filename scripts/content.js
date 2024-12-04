@@ -2,8 +2,9 @@
 let countNonValid = 0;
 let countTotal = 0;
 let toggle = false;
+let restoredDoc;
 // let body = document.getElementsByTagName("body")[0];
-const originalBody = document.body.cloneNode(true);
+let originalBody = document.body.cloneNode(true);
 
 var xml = new XMLSerializer().serializeToString(originalBody);
 // console.log(originalBody);
@@ -49,17 +50,17 @@ async function analyzeAccessibility() {
 
           chrome.storage.local.get(["originalBody"]).then((result) => {
             if (result.originalBody) {
-              const restoredDoc = new DOMParser().parseFromString(result.originalBody, "text/html");
+              restoredDoc = new DOMParser().parseFromString(result.originalBody, "text/html");
               document.body.innerHTML = restoredDoc.body.innerHTML; // Restore original body HTML
+              originalBody=restoredDoc.body.innerHTML;
             }
           });
 
         // console.log(document.body);
         // console.log(originalBody);
     } else {
-        const body = document.body;
-        let parentBackgroundColor = getComputedStyle(body).backgroundColor; 
-        await scrapeForColors(body, originalBody, parentBackgroundColor);
+        let parentBackgroundColor = getComputedStyle(document.body).backgroundColor; 
+        await scrapeForColors(document.body, parentBackgroundColor);
         // console.log(document.body);
         // console.log(originalBody);
     }
@@ -127,7 +128,7 @@ function getChildText(element) {
     return text;
 }
 
-async function scrapeForColors(element, ogElement, parentBackgroundColor) {
+async function scrapeForColors(element, parentBackgroundColor) {
     for(let i=0; i<element.children.length; i++) {
         // console.log(getChildText(element.children[i]));
         // console.log(element);
@@ -168,11 +169,12 @@ async function scrapeForColors(element, ogElement, parentBackgroundColor) {
                     element.children[i].style.color="black";
                     element.children[i].style.fontSize="18px";
                 }
-            } else {
-                element.children[i].style.backgroundColor=ogElement.children[i].style.backgroundColor;
-                element.children[i].style.color=ogElement.children[i].style.color;
-                element.children[i].style.fontSize=ogElement.children[i].style.fontSize;
             }
+            //  else {
+            //     element.children[i].style.backgroundColor=ogElement.children[i].style.backgroundColor;
+            //     element.children[i].style.color=ogElement.children[i].style.color;
+            //     element.children[i].style.fontSize=ogElement.children[i].style.fontSize;
+            // }
         // }
 
         countTotal++;
@@ -182,7 +184,7 @@ async function scrapeForColors(element, ogElement, parentBackgroundColor) {
         // console.log("COUNT NOT VALID"+ countNonValid);
         
         // if((element?.children[i].children.length!=0)&&(ogElement?.children[i].children.length!=0)) { 
-            await scrapeForColors(element?.children[i],ogElement?.children[i],rgbBackgroundColor);
+            await scrapeForColors(element?.children[i],rgbBackgroundColor);
         // }
     }
 }
